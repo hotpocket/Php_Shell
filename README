@@ -7,7 +7,6 @@ Features:
 -- Potential Improvements --
 * some setter/getter for what ENV to pass to shell (instead of being hard coded) 
 
-
 ----------
 -- CODE --
 ----------
@@ -22,4 +21,3 @@ $bash = new Bash();
 
 $result = $bash->run("ls -l");
 var_export($result);
-
