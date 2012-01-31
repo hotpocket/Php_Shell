@@ -1,6 +1,9 @@
 <?php
 class Bash {
-    
+
+    const STDOUT_EOF = "--stdout_end_of_stream--";
+    const STDERR_EOF = "--stderr_end_of_stream--";
+
     private $_shellProc;
     
     private $_stderr;
@@ -16,7 +19,7 @@ class Bash {
             // providing us with consistent EOF tokens for each process executed from within the 1 resident
             // bash process
             self::$_runAndDeleteSh = '<(echo "retStat=1;endstreams(){ '
-                .'echo \"--stdout_end_of_stream--\$retStat\";echo \"--stderr_end_of_stream--\" >&2;exit; };'
+                .'echo \"'.self::STDOUT_EOF.'\$retStat\";echo \"'.self::STDERR_EOF.'\" >&2;exit; };'
                 .'trap endstreams 0 2 3 6 15;sh \$1;retStat=\$?;rm \$1;endstreams")';
             #echo self::$_runAndDeleteSh;
         }
@@ -133,7 +136,7 @@ class Bash {
                             $stderrSegment = substr_replace($stderrSegment,'',0,$pos+1); // remove line from segment
                         }
                     }
-                    if(($pos = strpos($stderrBuff,'--stderr_end_of_stream--')) !== false) {
+                    if(($pos = strpos($stderrBuff,self::STDERR_EOF)) !== false) {
                         $stderrBuff = substr_replace($stderrBuff,'',$pos); // drop end_of_stream token from buffer
                         $eofStderr = true;
                     }
@@ -156,8 +159,8 @@ class Bash {
                             $stdoutSegment = substr_replace($stdoutSegment,'',0,$pos+1); // remove line from segment
                         }
                     }
-                    if(($pos = strpos($stdoutBuff,'--stdout_end_of_stream--')) !== false) {
-                        $return['status'] = intval(trim(substr($stdoutBuff,$pos+strlen('--stdout_end_of_stream--'))));
+                    if(($pos = strpos($stdoutBuff,self::STDOUT_EOF)) !== false) {
+                        $return['status'] = intval(trim(substr($stdoutBuff,$pos+strlen(self::STDOUT_EOF))));
                         $stdoutBuff = substr_replace($stdoutBuff,'',$pos); // drop end_of_stream token from buffer
                         $eofStdout = true;
                     }
