@@ -1,52 +1,52 @@
 <?php
 class Bash {
-	
-	private $_shellProc;
-	
-	private $_stderr;
-	private $_stdout;
-	private $_stdin;
+    
+    private $_shellProc;
+    
+    private $_stderr;
+    private $_stdout;
+    private $_stdin;
 
-	private static $_runAndDeleteSh;
-	
-	public function __construct() {
-		if(empty(self::$_runAndDeleteSh)){
-			// bash source inside the magic bash <(...) construct which returns a shell script file handle.
-			// That FH is the shell script that executes, wrapping the execution of the ->run($cmd...)
-			// providing us with consistent EOF tokens for each process executed from within the 1 resident
-			// bash process
-			self::$_runAndDeleteSh = '<(echo "retStat=1;endstreams(){ '
-				.'echo \"--stdout_end_of_stream--\$retStat\";echo \"--stderr_end_of_stream--\" >&2;exit; };'
-				.'trap endstreams 0 2 3 6 15;sh \$1;retStat=\$?;rm \$1;endstreams")';
-			#echo self::$_runAndDeleteSh;
-		}
-	}
+    private static $_runAndDeleteSh;
+    
+    public function __construct() {
+        if(empty(self::$_runAndDeleteSh)){
+            // bash source inside the magic bash <(...) construct which returns a shell script file handle.
+            // That FH is the shell script that executes, wrapping the execution of the ->run($cmd...)
+            // providing us with consistent EOF tokens for each process executed from within the 1 resident
+            // bash process
+            self::$_runAndDeleteSh = '<(echo "retStat=1;endstreams(){ '
+                .'echo \"--stdout_end_of_stream--\$retStat\";echo \"--stderr_end_of_stream--\" >&2;exit; };'
+                .'trap endstreams 0 2 3 6 15;sh \$1;retStat=\$?;rm \$1;endstreams")';
+            #echo self::$_runAndDeleteSh;
+        }
+    }
 
-	
-	/**
-	 * Executes $cmd via a bash shell and seperates STDERR and STDOUT in seperate streams that can be attached to via callbacks
-	 * @param string $cmd The shell command to execute
-	 * @param bool $background If true will throw into background and return immediately.
-	 *        NOTE: If backgrounded then no useful data can be returned because the process will not have time to generate any.
-	 * @param string $tmpShName the name of the temp shell script created and run which contains $cmd.
-	 *               Useful to specify if tracking of the executed command is desired with some binary like ps or lsof
-	 * @param function $stdoutCallback A function/closure object taking 1 string arg.
-	 *                 Called with increments of output from stdout as it is processed from shell $cmd
+    
+    /**
+     * Executes $cmd via a bash shell and seperates STDERR and STDOUT in seperate streams that can be attached to via callbacks
+     * @param string $cmd The shell command to execute
+     * @param bool $background If true will throw into background and return immediately.
+     *        NOTE: If backgrounded then no useful data can be returned because the process will not have time to generate any.
+     * @param string $tmpShName the name of the temp shell script created and run which contains $cmd.
+     *               Useful to specify if tracking of the executed command is desired with some binary like ps or lsof
+     * @param function $stdoutCallback A function/closure object taking 1 string arg.
+     *                 Called with increments of output from stdout as it is processed from shell $cmd
      *                 If used keep in mind that these partial output snippits WILL INCLUDE the program inserted end of stream tokens
      * @param function $stderrCallback An function/closure object taking 1 string arg.
      *                 Called with increments of output from stderr as it is processed from shell $cmd
      *                 If used keep in mind that these partial output snippits WILL INCLUDE the program inserted end of stream tokens
-	 * @return array An array with four keys,
-	 * - ['command'] The command that was actually executed.
-	 * - ['status']  The integer exit status, any non 0 status means failure.
-	 * - ['output']  An array of lines of text returned from this commands STDOUT
-	 * - ['error']   An array of lines of text returned from this commands STDERR
-	 */
-	public function run($cmd, $background=false, $stdoutCallback = NULL, $stderrCallback = NULL){
+     * @return array An array with four keys,
+     * - ['command'] The command that was actually executed.
+     * - ['status']  The integer exit status, any non 0 status means failure.
+     * - ['output']  An array of lines of text returned from this commands STDOUT
+     * - ['error']   An array of lines of text returned from this commands STDERR
+     */
+    public function run($cmd, $background=false, $stdoutCallback = NULL, $stderrCallback = NULL){
         if($stdoutCallback !== NULL && !is_callable($stdoutCallback)){
-	       throw new Exception("Invalid stdout callback");
-	    }
-	    if($stderrCallback !== NULL && !is_callable($stderrCallback)){
+           throw new Exception("Invalid stdout callback");
+        }
+        if($stderrCallback !== NULL && !is_callable($stderrCallback)){
             throw new Exception("Invalid stderr callback");
         }
         if(empty($this->_stderr) || empty($this->_stdin) || empty($this->_stdout)){
@@ -63,8 +63,8 @@ class Bash {
                     $envInit['PARENT_SERVER_'.$key] = $value;
                 }
             }
-			// add more to $envInit if needed here
-			
+            // add more to $envInit if needed here
+            
             $this->_shellProc = proc_open('bash', $descSpec, $pipes,'/tmp',$envInit);
             if(!is_resource($this->_shellProc)){ throw new Exception("Could not init shell process"); }
             $this->_stdin  = &$pipes[0];
@@ -75,11 +75,11 @@ class Bash {
             stream_set_blocking($this->_stderr,false);
         }
 
-	    $tmpShName = microtime(true) .'-'. getmypid() .'-'. rand(0,42).".sh";
-	    $tmpSh = "/tmp/$tmpShName";
-	    $fp = fopen($tmpSh,'w+');
-	    fwrite($fp,$cmd);
-	    fclose($fp);
+        $tmpShName = microtime(true) .'-'. getmypid() .'-'. rand(0,42).".sh";
+        $tmpSh = "/tmp/$tmpShName";
+        $fp = fopen($tmpSh,'w+');
+        fwrite($fp,$cmd);
+        fclose($fp);
 
         $return = array(
             'output'    => array(),
@@ -94,7 +94,7 @@ class Bash {
             $shCmd .= ' 2> /dev/null > /dev/null &';
         }
         
-		#echo "Executing this cmd via resident shell process\n";
+        #echo "Executing this cmd via resident shell process\n";
         #var_export(array('sh_contents'=>$cmd,'sh_cmd'=>$shCmd));
 
         fwrite($this->_stdin, "$shCmd\n");
@@ -122,7 +122,7 @@ class Bash {
                 // or binary is expected & parsed by the cmd author in the cmd
                 $strIn = str_replace(array("\r\n","\r"),"\n",$strIn);
                 if(!empty($strIn)) {
-//					echo "stderr read:\n$strIn\n";
+//                    echo "stderr read:\n$strIn\n";
                     $stderrBuff .= $strIn;
                     if($stderrCallback !== NULL) {
                         $stderrSegment .= $strIn;
@@ -170,10 +170,10 @@ class Bash {
             $return['output'] = $stdoutBuff === "" ? array() : explode("\n",$stdoutBuff);
         }
 
-	    #echo "ShellCmd#>\n";
-	    #var_export($return);
+        #echo "ShellCmd#>\n";
+        #var_export($return);
 
-	    return $return;
-	}
+        return $return;
+    }
 }
 
