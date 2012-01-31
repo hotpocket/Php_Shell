@@ -1,0 +1,25 @@
+Since ffmpeg likes to spew onto stderr and I didn't want to combine the streams I opted for this approach.
+
+Features:
+* Run and stay resident shell process saved on proc construct/destruct ops
+* Can attach to stderr and/or stdout per line("\r\n","\r","\n") with a callback
+
+-- Potential Improvements --
+* some setter/getter for what ENV to pass to shell (instead of being hard coded) 
+
+
+----------
+-- CODE --
+----------
+
+$bash = new Bash(); 
+
+### Optional callback (stdout)
+#$callback = function($line) { printf("callbackLine: %s\r\n", $line); };
+#$result = $bash->run("ls -l",false,$callback);
+
+# see $bash->run() code docs for invocation options and expected return types.
+
+$result = $bash->run("ls -l");
+var_export($result);
+
