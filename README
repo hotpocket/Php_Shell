@@ -3,6 +3,7 @@ Since ffmpeg likes to spew onto stderr and I didn't want to combine the streams 
 Features:
 * Run and stay resident shell process saved on proc construct/destruct ops
 * Can attach to stderr and/or stdout per line("\r\n","\r","\n") with a callback
+* Can background a process easily
 
 -- Potential Improvements --
 * some setter/getter for what ENV to pass to shell (instead of being hard coded) 
