@@ -20,8 +20,8 @@ class Bash {
             // bash process
             self::$_runAndDeleteSh = '<(echo "retStat=1;endstreams(){ '
                 .'echo \"'.self::STDOUT_EOF.'\$retStat\";echo \"'.self::STDERR_EOF.'\" >&2;exit; };'
-                .'trap endstreams 0 2 3 6 15;sh \$1;retStat=\$?;rm \$1;endstreams")';
-            #echo self::$_runAndDeleteSh;
+		.'trap endstreams 0 2 3 6 15;bash \$1;retStat=\$?;rm \$1;")';
+            //echo self::$_runAndDeleteSh;
         }
     }
 
@@ -78,7 +78,7 @@ class Bash {
             stream_set_blocking($this->_stderr,false);
         }
 
-        $tmpShName = microtime(true) .'-'. getmypid() .'-'. rand(0,42).".sh";
+        $tmpShName = microtime(true) .'-'. getmypid() .'-'. rand(0,42).".bash";
         $tmpSh = "/tmp/$tmpShName";
         $fp = fopen($tmpSh,'w+');
         fwrite($fp,$cmd);
@@ -91,16 +91,16 @@ class Bash {
             'status'    => 0
         );
 
-        $shCmd = "sh ". self::$_runAndDeleteSh ." $tmpSh";
+        $bashCmd = "bash ". self::$_runAndDeleteSh ." $tmpSh";
         // for backgrounds processes stdout & stderr streams must be muted or else the process will not background
         if($background){ 
-            $shCmd .= ' 2> /dev/null > /dev/null &';
+            $bashCmd .= ' 2> /dev/null > /dev/null &';
         }
         
         #echo "Executing this cmd via resident shell process\n";
-        #var_export(array('sh_contents'=>$cmd,'sh_cmd'=>$shCmd));
+        #var_export(array('sh_contents'=>$cmd,'sh_cmd'=>$bashCmd));
 
-        fwrite($this->_stdin, "$shCmd\n");
+        fwrite($this->_stdin, "$bashCmd\n");
         fflush($this->_stdin);
 
         // buffers contents of streams to date and eof flags for both

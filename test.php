@@ -31,9 +31,15 @@ spew($result);
 $result = $bash->run('sleep 10',true);
 spew($result);
 
+#test bash specific functionality
+$result = $bash->run('cat <(echo "contents of a file")');
+print "Bash specific <() operator test:\n";
+spew($result);
+
+
 function spew($result){
     print "(status) '". $result['status'] ."'\n";
     print "(command)'". $result['command'] ."'\n";
     print "(stdout) '". implode("\n",$result['output']) ."'\n";
-    print "(stderr) '". implode("\n",$result['error']) ."'\n";
+    print "(stderr) '". implode("\n",$result['error']) ."'\n\n";
 }
