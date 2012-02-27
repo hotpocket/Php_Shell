@@ -20,7 +20,7 @@ class Bash {
             // bash process
             self::$_runAndDeleteSh = '<(echo "retStat=1;endstreams(){ '
                 .'echo \"'.self::STDOUT_EOF.'\$retStat\";echo \"'.self::STDERR_EOF.'\" >&2;exit; };'
-		.'trap endstreams 0 2 3 6 15;bash \$1;retStat=\$?;rm \$1;")';
+                .'trap endstreams 0 2 3 6 15;bash \$1;retStat=\$?;rm \$1;")';
             //echo self::$_runAndDeleteSh;
         }
     }
