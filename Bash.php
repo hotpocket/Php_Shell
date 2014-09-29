@@ -1,6 +1,5 @@
 <?php
 class Bash {
-// test
     const STDOUT_EOF = "--stdout_end_of_stream--";
     const STDERR_EOF = "--stderr_end_of_stream--";
 
