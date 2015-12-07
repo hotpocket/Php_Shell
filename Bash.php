@@ -7,7 +7,7 @@ class Bash {
      * Initially created to init the parent bash env with eval `ssh-agent`
      * because any attempt to do so via a $cmd fails because run($cmd) executes in a sub shell
      * and once it's done the agent becomes unavailable to future calls to run()
-     * In addition to the prior method not working, it also was leaving behiend a <defunct> process ... probably not good ...
+     * In addition to the prior method not working, it also was leaving behind a <defunct> process ... probably not good ...
      * @var string The bash string you want executed in the root bash process prior to the next call to the run($cmd) function
      */
     private $_rootProcExec = array();
@@ -22,7 +22,7 @@ class Bash {
     /**
      * Checked when run() is called to see if environment info is passed to the child.
      * Can matter when that environment info is calculated and impacts other processes in this process (e.g. session id)
-     * @var unknown_type
+     * @var bool
      */
     protected $_exportEnv = true;
 
@@ -72,9 +72,8 @@ class Bash {
      * @param string $cmd
      * @return Bash
      */
-    public function runRoot($cmd, $background=false, $stdoutCallback = NULL, $stderrCallback = NULL){
-        // would be hacky but may be of more benefit than detrement to do multi-command detection here via regex. TBD
-        $this->_initRun($stdoutCallback, $stderrCallback);
+    public function runRoot($cmd, $background=false, $stdoutFn = NULL, $stderrFn = NULL){
+        $this->_initRun($stdoutFn, $stderrFn);
 
         // mimic stream eof tokens like in $_runAndDeleteSh
         $outEOF = self::STDOUT_EOF;
@@ -87,7 +86,7 @@ class Bash {
         fwrite($this->_stdin, $bashCmd);
         fflush($this->_stdin);
 
-        $return = $this->_processCmdOutput($cmd, $background, $stdoutCallback, $stderrCallback);
+        $return = $this->_processCmdOutput($cmd, $background, $stdoutFn, $stderrFn);
         // echo "Bash response: \n" . var_export($return,true);
         return $return;
     }
@@ -99,10 +98,10 @@ class Bash {
      *        NOTE: If backgrounded then no useful data can be returned because the process will not have time to generate any.
      * @param string $tmpShName the name of the temp shell script created and run which contains $cmd.
      *               Useful to specify if tracking of the executed command is desired with some binary like ps or lsof
-     * @param function $stdoutCallback A function/closure object taking 1 string arg.
+     * @param function $stdoutFn A function/closure object taking 1 string arg.
      *                 Called with increments of output from stdout as it is processed from shell $cmd
      *                 If used keep in mind that these partial output snippits WILL INCLUDE the program inserted end of stream tokens
-     * @param function $stderrCallback An function/closure object taking 1 string arg.
+     * @param function $stderrFn An function/closure object taking 1 string arg.
      *                 Called with increments of output from stderr as it is processed from shell $cmd
      *                 If used keep in mind that these partial output snippits WILL INCLUDE the program inserted end of stream tokens
      * @return array An array with four keys,
@@ -111,8 +110,8 @@ class Bash {
      * - ['output']  An array of lines of text returned from this commands STDOUT
      * - ['error']   An array of lines of text returned from this commands STDERR
      */
-    public function run($cmd, $background=false, $stdoutCallback = NULL, $stderrCallback = NULL){
-        $return = $this->_initRun($stdoutCallback, $stderrCallback);
+    public function run($cmd, $background=false, $stdoutFn = NULL, $stderrFn = NULL){
+        $return = $this->_initRun($stdoutFn, $stderrFn);
 
         // wrap cmd in shell script to run in sub shell
         $tmpShName = microtime(true) .'-'. getmypid() .'-'. rand(0,42).".sh";
@@ -130,18 +129,18 @@ class Bash {
         fwrite($this->_stdin, "$shCmd\n");
         fflush($this->_stdin);
 
-        $return = $this->_processCmdOutput($cmd, $background, $stdoutCallback, $stderrCallback);
+        $return = $this->_processCmdOutput($cmd, $background, $stdoutFn, $stderrFn);
 
         //echo "Bash response: \n" . var_export($return,true);
 
         return $return;
     }
 
-    private function _initRun($stdoutCallback = NULL, $stderrCallback = NULL){
-        if($stdoutCallback !== NULL && !is_callable($stdoutCallback)){
+    private function _initRun($stdoutFn = NULL, $stderrFn = NULL){
+        if($stdoutFn !== NULL && !is_callable($stdoutFn)){
            throw new Exception("Invalid stdout callback");
         }
-        if($stderrCallback !== NULL && !is_callable($stderrCallback)){
+        if($stderrFn !== NULL && !is_callable($stderrFn)){
             throw new Exception("Invalid stderr callback");
         }
         if($this->_firstRun){
@@ -178,7 +177,7 @@ class Bash {
         }
     }
 
-    private function _processCmdOutput($cmd, $background=false, $stdoutCallback = NULL, $stderrCallback = NULL){
+    private function _processCmdOutput($cmd, $background=false, $stdoutFn = NULL, $stderrFn = NULL){
         $return = array(
             'output'    => array(),
             'error'     => array(),
@@ -210,12 +209,12 @@ class Bash {
                 if(!empty($strIn)) {
 //                    echo "stderr read:\n$strIn\n";
                     $stderrBuff .= $strIn;
-                    if($stderrCallback !== NULL) {
+                    if($stderrFn !== NULL) {
                         $stderrSegment .= $strIn;
                         while(($pos = strpos($stderrSegment,"\n")) !== false){
                             $line =  substr($stderrSegment,0,$pos);
 //                            echo "stdout calling callback with line:\n$line\n";
-                            $stderrCallback($line);
+                            $stderrFn($line);
                             $stderrSegment = substr_replace($stderrSegment,'',0,$pos+1); // remove line from segment
                         }
                     }
@@ -233,12 +232,12 @@ class Bash {
                 if(!empty($strIn)) {
 //                    echo "stdout read:\n$strIn";
                     $stdoutBuff .= $strIn;
-                    if($stdoutCallback !== NULL) {
+                    if($stdoutFn !== NULL) {
                        $stdoutSegment .= $strIn;
                         while(($pos = strpos($stdoutSegment,"\n")) !== false){
                             $line =  substr($stdoutSegment,0,$pos);
 //                            echo "stdout calling callback with line:\n$line";
-                            $stdoutCallback($line);
+                            $stdoutFn($line);
                             $stdoutSegment = substr_replace($stdoutSegment,'',0,$pos+1); // remove line from segment
                         }
                     }
@@ -332,7 +331,7 @@ EXPECT_SCRIPT;
      * If the passphrase is incorrect the add cert process can hang, wrap the call in an expect script here
      * so if the process takes more than 2s it returns.
      * @param string $cert The absolute path to the private cert
-     * @param unknown_type $passphrase
+     * @param string $passphrase
      * @throws Exception
      */
     private function _addCertP($cert, $passphrase){
@@ -377,31 +376,6 @@ EXPECT_SCRIPT;
         if(is_bool($bool)){
             $this->_exportEnv = $bool;
         }
-    }
-
-    /**
-     * helper to chunk out long lists used in commands for shell because of the 131072 shell cmd length limit.
-     * Note: the command using the resulting chunks must not be > 6072 chars long
-     * @param string $str A long string delimited by some character specified by $delim
-     * @param string $delim Must be one char that is the delimiter used in $str
-     * @return array An array of strings which are chunked substrings of $str with respect to $delim
-     */
-    public static function chunk($str,$delim){
-        if(strlen($delim) !== 1) throw new Exception("Delimiter must be 1 character in length.");
-        $block = $str;
-        $maxSize = 125000; // give some room for the command this list is being inside of
-        $return = array();
-        while(strlen($block) > $maxSize){
-            // shell commands can not have > 131072  chars.  left room for the mysqldump command.
-            $pos = $maxSize;
-            while($block[$pos] !== $delim){
-                $pos--;
-            }
-            $return[] = substr($block,0,$pos);
-            $block = substr($block,$pos+1); // leave out joining $delim between blocks
-        }
-        $return[] = $block;
-        return $return;
     }
 }
 
